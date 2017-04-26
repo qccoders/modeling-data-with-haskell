@@ -1,0 +1,357 @@
+* Functional Programming with Haskell:  Q-C Coders Edition
+
+** Installing
+ - [[https://docs.haskellstack.org/en/stable/README/#how-to-install][Install Stack]]
+
+** Disclaimer
+ - This is the first time i've explained haskell to other people.
+ - Most everything I know I learned from [[http://haskellbook.com/][Haskell from First Principles]] and searching online.
+ - I'm not an expert
+ 
+** Types
+ - Types represent what we are modeling with our code.
+ - The most simple type.
+ #+BEGIN_SRC haskell
+ data Trivial = Trivial
+  1     2     3   4
+ #+END_SRC
+ - The break down:
+   1. "data" is the keyword signaling the start of a type.
+   2. "Type Constructor"
+   3. "=" is the equals sign
+   4. "Data Constructor" It is "nullary" meaning it accepts no arguments.
+
+ - Seperation between "Types" and "Terms"
+   - Types are for the compiler. Type Constructors are at this level.
+   - Terms are the code you write. Data Constructors are at this level.
+   - These 2 levels do not currently mix in haskell.
+  
+ #+BEGIN_SRC haskell
+ data Trivial = Trivial' deriving Show
+ Trivial
+ #+END_SRC
+ #+BEGIN_SRC haskell
+ Trivial'
+ #+END_SRC
+
+ Where is the type constructor used? Prepare to see your first type annotation.
+
+ #+BEGIN_SRC haskell
+ f :: String -> String -> String
+ f = ... 
+ #+END_SRC
+
+** Currying
+
+ #+BEGIN_SRC haskell
+ let f :: String -> String -> String; f x y = "blah"
+ #+END_SRC
+ #+BEGIN_SRC haskell
+ trivialFunc :: Trivial -> Integer
+ trivialFunc t = ...
+ #+END_SRC
+
+Which means... The function f accepts two string arguments and returns a string.
+
+Except what it actually means is... The function f accepts a string and returns a function that accepts a string and returns a string.
+
+#+BEGIN_SRC haskell
+f :: String -> String -> String
+f = \ x -> \ y -> "blah"
+-- same as
+f x y = "blah"
+#+END_SRC
+
+** Back to Trivial
+
+How would we use trivial?
+
+#+BEGIN_SRC haskell
+f :: Trivial
+f = Trivial
+
+g :: Trivial -> Trivial
+g Trivial = Trivial -- pattern matching
+
+-- or
+g _ = Trivial -- ignore the result
+-- or
+g x = Trivial -- bind the argument to x, but don't use it.
+
+#+END_SRC
+
+What can a function with this signature do?
+
+#+BEGIN_SRC haskell
+trivialInt :: Trivial -> Integer
+#+END_SRC
+
+Trivial exists in Haskell without us having to define it.  It is called unit and is represented by ().
+
+#+BEGIN_SRC haskell
+()
+#+END_SRC
+
+** Identity
+
+#+BEGIN_SRC haskell
+data Identity a = Identity a
+        1            2
+#+END_SRC
+
+1. Type constructor which accepts one argument.
+2. Data constructor which accepts one argument. It is "unary" meaning it accepts one argument.
+
+What can we do with Identity?
+
+#+BEGIN_SRC haskell
+unpack :: Identity a -> a
+unpack (Identity a) = a -- pattern matching
+
+embed :: a -> Identity a
+embed a = Identity a
+
+imap :: (a -> b) -> Identity a -> Identity b -- accepts a higher order function, an Identity a and returns an Identity b.
+imap f (Identity a) = Identity (f a) -- pattern matching
+#+END_SRC
+
+#+BEGIN_SRC haskell
+let inc = (+1)
+
+:t inc
+inc :: Num a => a -> a
+
+inc 2
+3
+
+inc (Identity 2) -- doesn't work, and gives you a terrible error (sorry).
+
+imap inc (Identity 2)
+Identity 3
+#+END_SRC
+
+** Product Types
+
+Time to add another argument to our unary data constructor.  What do you call it?  A product, also called a record, or a struct.
+
+In this type, Person is a product of String and Int.
+#+BEGIN_SRC haskell
+data Person = Person String Int
+#+END_SRC
+
+Note, "String" and "Int" are arguments to the Person data constructor, but they are also type constructors.  Confusing?  Good.
+
+You can't do this.
+#+BEGIN_SRC haskell
+data Person = Person "Nick" 26
+#+END_SRC
+
+When declaring a type, the arguments passed to your data constructor must be type constructors.
+
+The types we are defining are also functions themselves.
+
+#+BEGIN_SRC haskell
+data Person = Person String Int
+
+:t Person
+Person :: String -> Int -> Person
+#+END_SRC
+
+** Record Syntax
+
+An alternative way to define product types.
+
+#+BEGIN_SRC haskell
+data Person = Person { name :: String 
+                     , age :: Int }
+#+END_SRC
+
+In the type above, name and age are called "field accessors".
+
+They are just functions.
+
+#+BEGIN_SRC haskell
+nick = Person "Nick" 26
+
+age nick
+26
+
+:t age
+age :: Person -> Int
+#+END_SRC
+
+** Tuple
+
+We worked with anonymous functions before, so what about anonymous products?  Hello Tuples.
+
+#+BEGIN_SRC haskell
+type Person = (String, Int)
+#+END_SRC
+
+The type keyword only creates type constructors. These types already exist, there are no data constructors here. 
+#+BEGIN_SRC haskell
+let f (s, i) = ("Car " ++ s, i + 1)
+
+:t f
+f :: Num t => ([Char], t) -> ([Char], t)
+
+f ("blah", 3)
+("car blah", 4)
+#+END_SRC
+
+Why does the function signature use [Char] instead of String like we originally stated? [Char] is just list of characters, which is a string.  It's defined below.
+
+#+BEGIN_SRC haskell
+:i String
+type String = [Char]
+#+END_SRC
+
+It's just a type alias.  The type inference doesn't use aliases.  So it shows up as [Char].
+
+Why?  What if you had multiple type aliases for the same type?  How could the compiler know?
+
+** Nested Tuples
+You can nest tuples.  
+#+BEGIN_SRC haskell
+(String, (Int, (Integer, String)))
+#+END_SRC
+
+This is what makes the 2-tuple an anonymous universal product. Since you can nest, you can make any product.
+
+** Exercise
+#+BEGIN_SRC haskell
+data Car = Car { make :: CarMake
+               , model :: CarModel
+               , year :: CarYear 
+               }
+#+END_SRC
+
+Assuming:
+
+
+#+BEGIN_SRC haskell
+data CarMake = CarMake deriving Show
+data CarModel = CarModel deriving Show
+data CarYear = CarYear deriving Show
+#+END_SRC
+
+Rewrite the product type above as a 2-tuple.
+#+BEGIN_SRC haskell
+type Car = ???
+#+END_SRC
+Tuples are also functions.  Surprise.
+
+#+BEGIN_SRC haskell
+:t (,)
+(,) :: a -> b -> (a, b)
+
+:t (,,)
+(,,) :: a -> b -> c -> (a, b, c)
+#+END_SRC
+
+What is a?  A can be anything, even another Tuple. Same goes for b, and c.
+
+** More Exercises
+
+Given:
+
+#+BEGIN_SRC haskell
+fst :: (a, b) -> a
+snd :: (a, b) -> b
+#+END_SRC
+
+Add the accessors back for your nested tuple type.
+
+#+BEGIN_SRC haskell
+make :: Car -> CarMake
+make = undefined
+
+model :: Car -> CarModel
+model = undefined
+
+year :: Car -> CarYear
+year = undefined
+#+END_SRC
+
+** Sum Types
+
+Earlier we used multiple arguments in one data constructor.  This is a product.
+
+When you have multiple data constructors you have a sum type.
+
+Product is "and"
+
+Sum is "or"
+
+You can read the following as Car is a Make a Model and a Year
+#+BEGIN_SRC haskell
+data Car = Car CarMake CarModel CarYear
+#+END_SRC
+
+You can read the following as Bool is False or True.
+#+BEGIN_SRC haskell
+data Bool = False | True
+#+END_SRC
+
+** Anonymous Sum Types
+
+#+BEGIN_SRC haskell
+data Either a b = Left a | Right b
+#+END_SRC
+
+Example Function
+#+BEGIN_SRC haskell
+example :: Either CarMake CarModel
+example = ???
+#+END_SRC
+
+#+BEGIN_SRC haskell
+example = Left CarMake
+
+example = Right CarModel
+#+END_SRC
+
+
+What can this function do?
+
+#+BEGIN_SRC haskell
+boolInteger :: Bool -> Integer
+#+END_SRC
+
+How about this one?
+
+#+BEGIN_SRC haskell
+data Quantam = True | False | Both
+
+quantInteger :: Quantum -> Integer
+#+END_SRC
+
+** Maybe
+Don't rely on null when you have maybe.
+
+#+BEGIN_SRC haskell
+data Maybe a = Something a | Nothing
+#+END_SRC
+
+Our manager just came in and told us Age needs to be an optional field, uh oh... 
+
+#+BEGIN_SRC haskell
+data Person = Person String (Maybe Integer)
+#+END_SRC
+
+A function which uses a maybe type to determine if this person can enlist in the military.
+
+#+BEGIN_SRC haskell
+canEnlist :: Person -> Bool
+canEnlist (Person _ Nothing) = False -- I don't know the user's age, i'll say no on the off chance they turn out to be 12. 
+canEnlist (Person _ (Just x)) = x >= 18
+#+END_SRC
+
+Using a Maybe type in a function.
+
+#+BEGIN_SRC haskell
+isGreaterThanZero :: Maybe Integer -> Bool
+isGreaterThanZero Nothing = False
+isGreaterThanZero _ = True
+
+#+END_SRC
